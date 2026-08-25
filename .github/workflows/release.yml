@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Run tests
+        shell: powershell
+        run: npm run check
+      - name: Test installer
+        shell: powershell
+        run: .\scripts\publish-personal.ps1 -SelfTest
+      - name: Verify tag and build ZIP
+        shell: powershell
+        run: |
+          $version = (Get-Content -Raw .\package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -cne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match monitor version $version."
+          }
+          .\scripts\build-release.ps1 -OutputDirectory .\dist -Version $version
+      - name: Create GitHub Release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content -Raw .\package.json | ConvertFrom-Json).version
+          $notesPath = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+          @"
+          Download ``aihub-codex-monitor-$version.zip``, extract it completely,
+          close Codex, then run ``install.bat`` from the extracted folder.
+
+          The installer synchronizes the plugin, creates or updates the current
+          user's personal marketplace entry, registers hidden startup, and runs
+          the Codex plugin installer. Reopen Codex after it completes.
+          "@ | Set-Content -LiteralPath $notesPath -Encoding utf8
+          $assets = @(Get-ChildItem -LiteralPath .\dist -File | ForEach-Object FullName)
+          & gh release create $env:GITHUB_REF_NAME @assets `
+            --verify-tag `
+            --title "AIHub Codex Monitor $version" `
+            --notes-file $notesPath
+          if ($LASTEXITCODE -ne 0) { throw "GitHub Release creation failed with exit code $LASTEXITCODE." }

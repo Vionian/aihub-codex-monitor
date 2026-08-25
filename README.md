@@ -2,6 +2,10 @@
 
 面向 Codex 桌面客户端的本地监控与中转站计费插件。默认提供通用 OpenAI 兼容中转站适配器，并保留 AIHub 专用增强。
 
+## Release 一键安装包
+
+从 [GitHub Releases](https://github.com/Vionian/aihub-codex-monitor/releases/latest) 下载 `aihub-codex-monitor-<版本>.zip`，完整解压、关闭 Codex 后双击包内的 `install.bat`。安装脚本会验证插件、同步到当前用户插件目录、补齐个人 marketplace 条目、注册隐藏启动项并调用 Codex CLI 安装；完成后重新打开 Codex 即可。不要直接在压缩包预览窗口中运行。
+
 ## 能力
 
 - 从 Codex rollout 增量读取实际模型、推理强度、输入、缓存输入、输出、推理 Token、首字延迟、总耗时和错误。
@@ -83,7 +87,7 @@ Codex 插件清单没有可供 MCP 直接挂载的原生状态栏插槽。状态
 .\install.bat
 ```
 
-脚本使用 Codex 官方缓存刷新辅助程序、验证插件、停止占用正式端口的旧监控服务、同步个人插件源，并把半安装的孤立缓存移动到带时间戳的可恢复备份后调用 `codex plugin add`。它不会手工编辑 `marketplace.json` 或 `config.toml`。
+脚本会验证插件 manifest、停止占用正式端口的旧监控服务、同步个人插件源，并以结构化 JSON 更新当前用户的 personal marketplace 条目；如果发现半安装的孤立缓存，会先移动到带时间戳的可恢复备份，再调用 `codex plugin add`。Release 安装不依赖 Python，也不会修改 `config.toml`。
 
 卸载插件：
 

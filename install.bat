@@ -19,9 +19,11 @@ set "EXIT_CODE=%ERRORLEVEL%"
 if not "%EXIT_CODE%"=="0" (
   echo.
   echo [ERROR] Installation failed with exit code %EXIT_CODE%.
+  pause
   exit /b %EXIT_CODE%
 )
 
 echo.
 echo Installation completed. Restart Codex and create a new task.
+pause
 exit /b 0

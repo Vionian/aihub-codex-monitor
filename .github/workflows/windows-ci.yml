@@ -1,0 +1,26 @@
+name: Windows CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Run tests
+        shell: powershell
+        run: npm run check
+      - name: Test installer
+        shell: powershell
+        run: .\scripts\publish-personal.ps1 -SelfTest
+      - name: Build release archive
+        shell: powershell
+        run: .\scripts\build-release.ps1 -OutputDirectory .\dist

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { createMonitorHttpServer, listen } from "../src/http-server.mjs";
+import { VERSION } from "../src/version.mjs";
 
 class FakeService extends EventEmitter {
   constructor() {
@@ -24,7 +25,7 @@ test("HTTP server exposes health, state and dashboard only on loopback", async (
   const base = `http://127.0.0.1:${port}`;
 
   const health = await fetch(`${base}/healthz`).then((response) => response.json());
-  assert.deepEqual(health, { ok: true, version: "0.3.0" });
+  assert.deepEqual(health, { ok: true, version: VERSION });
   const state = await fetch(`${base}/api/state`).then((response) => response.json());
   assert.equal(state.runtime.running, true);
   const dashboard = await fetch(`${base}/`).then((response) => response.text());

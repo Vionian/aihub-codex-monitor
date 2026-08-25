@@ -3,7 +3,8 @@ param(
   [string]$TargetRoot = (Join-Path $env:USERPROFILE "plugins\aihub-codex-monitor"),
   [int]$Port = 48160,
   [int]$StatuslineHealthPort = 48161,
-  [switch]$StopRunningMonitor
+  [switch]$StopRunningMonitor,
+  [switch]$SelfTest
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +27,117 @@ function Wait-PortClosed([int]$ListenPort) {
     Start-Sleep -Milliseconds 250
   }
   throw "Port $ListenPort is still listening after the monitor process was stopped."
+}
+
+function Ensure-PersonalMarketplaceEntry {
+  param(
+    [string]$MarketplacePath = (Join-Path $env:USERPROFILE ".agents\plugins\marketplace.json")
+  )
+  $marketplacePath = [System.IO.Path]::GetFullPath($MarketplacePath)
+  $marketplaceDirectory = Split-Path -Parent $marketplacePath
+  $payload = $null
+  $changed = $false
+  if (Test-Path -LiteralPath $marketplacePath -PathType Leaf) {
+    try {
+      $payload = Get-Content -Raw -LiteralPath $marketplacePath | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+      throw "The personal marketplace file is invalid JSON and was preserved: $marketplacePath"
+    }
+    if ($null -eq $payload -or $payload -is [array] -or $payload -is [string]) {
+      throw "The personal marketplace file must contain a JSON object: $marketplacePath"
+    }
+    if (-not "$($payload.name)" -or "$($payload.name)" -notmatch '\A[A-Za-z0-9_-]+\z') {
+      throw "The personal marketplace has an invalid name: $marketplacePath"
+    }
+    if ($null -eq $payload.PSObject.Properties['plugins']) {
+      $payload | Add-Member -NotePropertyName plugins -NotePropertyValue @()
+      $changed = $true
+    } elseif ($null -ne $payload.plugins -and $payload.plugins -isnot [array] -and
+      $payload.plugins -isnot [System.Collections.IEnumerable]) {
+      throw "The personal marketplace plugins field must be an array: $marketplacePath"
+    }
+  } else {
+    $payload = [pscustomobject][ordered]@{
+      name = 'personal'
+      interface = [pscustomobject][ordered]@{ displayName = 'Personal' }
+      plugins = @()
+    }
+    $changed = $true
+  }
+
+  $entry = [pscustomobject][ordered]@{
+    name = 'aihub-codex-monitor'
+    source = [pscustomobject][ordered]@{
+      source = 'local'
+      path = './plugins/aihub-codex-monitor'
+    }
+    policy = [pscustomobject][ordered]@{
+      installation = 'AVAILABLE'
+      authentication = 'ON_INSTALL'
+    }
+    category = 'Productivity'
+  }
+  $plugins = @($payload.plugins)
+  $entryJson = $entry | ConvertTo-Json -Depth 10 -Compress
+  $found = $false
+  for ($index = 0; $index -lt $plugins.Count; $index++) {
+    if ($null -ne $plugins[$index] -and "$($plugins[$index].name)" -ceq 'aihub-codex-monitor') {
+      $found = $true
+      if (($plugins[$index] | ConvertTo-Json -Depth 10 -Compress) -cne $entryJson) {
+        $plugins[$index] = $entry
+        $changed = $true
+      }
+      break
+    }
+  }
+  if (-not $found) {
+    $plugins += $entry
+    $changed = $true
+  }
+  $payload.plugins = @($plugins)
+
+  if ($changed) {
+    $null = New-Item -ItemType Directory -Path $marketplaceDirectory -Force
+    $temporaryPath = Join-Path $marketplaceDirectory (
+      '.marketplace.' + [Guid]::NewGuid().ToString('N') + '.tmp'
+    )
+    try {
+      $encoding = [System.Text.UTF8Encoding]::new($false)
+      $content = ($payload | ConvertTo-Json -Depth 20) + "`r`n"
+      [System.IO.File]::WriteAllText($temporaryPath, $content, $encoding)
+      Move-Item -LiteralPath $temporaryPath -Destination $marketplacePath -Force
+    } finally {
+      if (Test-Path -LiteralPath $temporaryPath -PathType Leaf) {
+        Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
+      }
+    }
+  }
+  return "$($payload.name)"
+}
+
+if ($SelfTest) {
+  $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
+    'AIHubCodexMonitorInstallerTest.' + [Guid]::NewGuid().ToString('N')
+  )
+  $testMarketplace = Join-Path $testRoot 'marketplace.json'
+  try {
+    $firstName = Ensure-PersonalMarketplaceEntry -MarketplacePath $testMarketplace
+    $secondName = Ensure-PersonalMarketplaceEntry -MarketplacePath $testMarketplace
+    $testPayload = Get-Content -Raw -LiteralPath $testMarketplace |
+      ConvertFrom-Json -ErrorAction Stop
+    $entries = @($testPayload.plugins | Where-Object { $_.name -ceq 'aihub-codex-monitor' })
+    if ($firstName -cne 'personal' -or $secondName -cne 'personal' -or
+      $entries.Count -ne 1 -or
+      $entries[0].source.path -cne './plugins/aihub-codex-monitor') {
+      throw 'Personal marketplace installer self-test returned an invalid entry.'
+    }
+    Write-Host 'AIHub Codex Monitor installer self-test passed.'
+  } finally {
+    if (Test-Path -LiteralPath $testRoot -PathType Container) {
+      Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
+  return
 }
 
 $listenerPid = Get-ListenerProcessId $Port
@@ -56,25 +168,22 @@ if ($statuslinePid) {
   Wait-PortClosed $StatuslineHealthPort
 }
 
-$creatorRoot = Join-Path $env:USERPROFILE ".codex\skills\.system\plugin-creator"
-$cachebuster = Join-Path $creatorRoot "scripts\update_plugin_cachebuster.py"
-$validator = Join-Path $creatorRoot "scripts\validate_plugin.py"
-$marketplaceReader = Join-Path $creatorRoot "scripts\read_marketplace_name.py"
-
-& python $cachebuster $SourceRoot
-if ($LASTEXITCODE -ne 0) { throw "Could not update the plugin cachebuster." }
-& python $validator $SourceRoot
-if ($LASTEXITCODE -ne 0) { throw "Plugin validation failed." }
+$manifestPath = Join-Path $SourceRoot ".codex-plugin\plugin.json"
+try { $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json -ErrorAction Stop } catch {
+  throw "Plugin manifest is invalid JSON: $manifestPath"
+}
+if ($manifest.name -cne 'aihub-codex-monitor' -or -not "$($manifest.version)") {
+  throw "Plugin manifest name or version is invalid: $manifestPath"
+}
 
 New-Item -ItemType Directory -Path $TargetRoot -Force | Out-Null
 Get-ChildItem -Force -LiteralPath $SourceRoot | Where-Object {
-  $_.Name -notin @(".dev-data", ".launcher-data")
+  $_.Name -notin @(".dev-data", ".launcher-data", ".git", "dist")
 } | ForEach-Object {
   Copy-Item -LiteralPath $_.FullName -Destination $TargetRoot -Recurse -Force
 }
 
-$marketplaceName = (& python $marketplaceReader).Trim()
-if ($LASTEXITCODE -ne 0 -or -not $marketplaceName) { throw "Could not read the personal marketplace name." }
+$marketplaceName = Ensure-PersonalMarketplaceEntry
 
 $list = & codex plugin list --json | ConvertFrom-Json
 $installed = @($list.installed) | Where-Object { $_.pluginId -eq "aihub-codex-monitor@$marketplaceName" }

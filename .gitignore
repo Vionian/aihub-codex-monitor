@@ -8,3 +8,4 @@ runtime/
 *.credential.xml
 config.local.json
 config.private.json
+dist/
