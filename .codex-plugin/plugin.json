@@ -1,0 +1,37 @@
+{
+  "name": "aihub-codex-monitor",
+  "version": "0.3.0+codex.20260825172412",
+  "description": "Generic relay request telemetry and pricing, with AIHub routing and balance enhancements for Codex.",
+  "author": {
+    "name": "AIHub Codex Monitor contributors"
+  },
+  "license": "MIT",
+  "keywords": [
+    "aihub",
+    "codex",
+    "telemetry",
+    "routing",
+    "failover"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AIHub Codex Monitor",
+    "shortDescription": "Live Codex usage, relay pricing, latency, and optional AIHub routing.",
+    "longDescription": "Reads exact Codex rollout telemetry, estimates cost for any configured OpenAI-compatible relay, optionally observes Responses API traffic through a loopback proxy, and adds AIHub balance, provider health, group switching, and failover when the AIHub adapter is selected.",
+    "developerName": "AIHub Codex Monitor contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "brandColor": "#21C58B",
+    "defaultPrompt": [
+      "Start the live AIHub status line above the Codex composer.",
+      "Open the AIHub monitor at the bottom.",
+      "Show AIHub provider health and the active group.",
+      "Switch AIHub routing to economy mode."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AIHub / Codex Monitor</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body data-layout="horizontal">
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">A</div>
+      <div class="brand-copy"><strong>Relay Monitor</strong><span>Codex request intelligence</span></div>
+      <div class="top-status"><span id="service-dot" class="status-dot"></span><span id="service-label">连接中</span></div>
+      <div class="top-actions">
+        <div class="segmented" aria-label="路由模式">
+          <button data-mode="economy">经济</button><button data-mode="balanced">平衡</button><button data-mode="speed">速度</button>
+        </div>
+        <button class="quiet-button" id="refresh-button">刷新</button>
+      </div>
+    </header>
+
+    <section id="system-state" class="state-banner state-loading" aria-live="polite">
+      <span class="state-icon" aria-hidden="true"></span>
+      <div><strong id="state-title">正在连接本地监控服务</strong><span id="state-detail">界面已经加载，正在读取运行状态。</span></div>
+      <span id="source-badge" class="source-badge">CONNECTING</span>
+    </section>
+
+    <main>
+      <section class="live-strip" aria-label="最近请求">
+        <div class="metric primary"><span class="metric-label">模型</span><strong id="metric-model">等待请求</strong></div>
+        <div class="metric"><span class="metric-label">推理强度</span><strong id="metric-reasoning">--</strong></div>
+        <div class="metric token-metric"><span class="metric-label">TOKEN</span><strong id="metric-tokens">--</strong><small id="metric-total">缓存 -- · 总计 --</small></div>
+        <div class="metric cost"><span class="metric-label">费用</span><strong id="metric-cost">--</strong><small id="metric-cost-source">来源 --</small></div>
+        <div class="metric latency"><span class="metric-label">延迟</span><strong id="metric-ttft">首字 --</strong><small id="metric-total-ms">总耗时 --</small></div>
+        <div class="metric group"><span class="metric-label">使用分组</span><strong id="metric-group">--</strong><small id="metric-multiplier">倍率 --</small></div>
+        <div class="metric balance"><span class="metric-label">余额</span><strong id="metric-balance">--</strong><small id="metric-balance-source">等待账户数据</small></div>
+      </section>
+
+      <nav class="view-tabs" aria-label="监控视图">
+        <button class="view-tab is-active" data-view="overview">概览</button>
+        <button class="view-tab" data-view="providers">分组与健康</button>
+        <button class="view-tab" data-view="requests">请求记录</button>
+        <button class="view-tab" data-view="settings">设置</button>
+      </nav>
+
+      <section id="view-overview" class="view-panel">
+        <div class="section-heading"><div><span class="eyebrow">ROUTE DECISION</span><h1>路由状态</h1></div><span id="last-refresh" class="muted">尚未刷新</span></div>
+        <div class="route-grid">
+          <div class="route-summary">
+            <div class="route-kicker">当前决策</div>
+            <div id="route-name" class="route-name">等待供应商数据</div>
+            <div id="route-reason" class="route-reason">正在获取分组健康度与路由决策。</div>
+            <div class="route-meta"><span id="route-mode">平衡</span><span id="route-candidates">候选 --</span><span id="route-confidence">置信度 --</span></div>
+          </div>
+          <div class="mini-table-wrap"><table class="mini-table"><thead><tr><th>指标</th><th>本次</th><th>累计</th></tr></thead><tbody>
+            <tr><td>请求</td><td id="summary-requests">--</td><td id="summary-total-requests">--</td></tr>
+            <tr><td>Token</td><td id="summary-tokens">--</td><td id="summary-total-tokens">--</td></tr>
+            <tr><td>费用</td><td id="summary-cost">--</td><td id="summary-total-cost">--</td></tr>
+          </tbody></table></div>
+        </div>
+        <div class="section-heading compact-heading"><div><span class="eyebrow">RECENT REQUEST</span><h2>最近一次</h2></div><button id="open-requests" class="text-button">查看全部</button></div>
+        <div id="recent-request" class="request-line empty-state">等待第一个 Codex 请求。</div>
+      </section>
+
+      <section id="view-providers" class="view-panel hidden">
+        <div class="section-heading"><div><span class="eyebrow">PROVIDER HEALTH</span><h1>分组与健康</h1></div><span id="provider-count" class="muted">-- 个分组</span></div>
+        <div class="table-scroll"><table class="data-table"><thead><tr><th>分组</th><th>倍率 ↑</th><th>状态 / 模型</th><th>用户速度</th><th>缓存命中</th><th>可用率</th><th>模型检测</th><th>使用分组</th></tr></thead><tbody id="provider-rows"><tr><td colspan="8" class="empty-state">等待供应商数据</td></tr></tbody></table></div>
+      </section>
+
+      <section id="view-requests" class="view-panel hidden">
+        <div class="section-heading"><div><span class="eyebrow">REQUEST LOG</span><h1>请求记录</h1></div><span class="muted">最多保留 200 条</span></div>
+        <div class="table-scroll"><table class="data-table request-table"><thead><tr><th>时间</th><th>模型</th><th>推理</th><th>Token</th><th>费用</th><th>延迟</th><th>分组</th><th>状态 / 来源</th></tr></thead><tbody id="request-rows"><tr><td colspan="8" class="empty-state">等待第一个 Codex 请求</td></tr></tbody></table></div>
+      </section>
+
+      <section id="view-settings" class="view-panel hidden">
+        <div class="section-heading"><div><span class="eyebrow">CONTROL PLANE</span><h1>设置</h1></div><span id="credential-state" class="muted">凭据状态 --</span></div>
+        <p id="credential-help" class="muted">正在读取 AIHub 登录状态。</p>
+        <form id="settings-form" class="settings-grid">
+          <label>适配器<select id="relay-adapter"><option value="aihub">AIHub 增强</option><option value="generic">通用中转站</option></select></label>
+          <label>中转站名称<input id="relay-name" placeholder="例如 AIHub"></label>
+          <label class="wide">中转站地址<input id="relay-base-url" type="url" placeholder="https://relay.example.com"></label>
+          <label>全局倍率<input id="relay-multiplier" type="number" min="0" max="1000" step="0.01"></label>
+          <label>费用币种<input id="relay-currency" maxlength="8" placeholder="USD"></label>
+          <label>管理的 Key ID<input id="managed-key-ids" inputmode="numeric" placeholder="例如 12, 18"></label>
+          <label>禁用分组 ID<input id="blacklisted-group-ids" placeholder="例如 7, 21"></label>
+          <label>最高倍率<input id="maximum-multiplier" type="number" min="0" max="1000" step="0.01"></label>
+          <label>最低置信度<input id="minimum-confidence" type="number" min="0" max="1" step="0.01"></label>
+          <label>分组粘性<input id="group-stickiness" type="number" min="0" max="10" step="0.01"></label>
+          <label>轮询间隔（秒）<input id="poll-interval" type="number" min="15" max="3600" step="1"></label>
+          <label class="toggle-field"><input id="routing-enabled" type="checkbox"><span>自动选择分组</span></label>
+          <label class="toggle-field"><input id="failover-enabled" type="checkbox"><span>故障时自动切组</span></label>
+          <label class="wide">费用表 JSON<input id="model-pricing" placeholder='{"gpt-5.6-sol":{"inputPerMillion":0,"outputPerMillion":0}}'></label>
+          <label class="wide">模型别名 JSON<input id="model-aliases" placeholder='{"relay-model-name":"gpt-5.6-sol"}'></label>
+          <div class="settings-actions"><button class="primary-button" type="submit">保存设置</button><button class="quiet-button" type="button" id="layout-button">切换布局</button><span id="settings-message" class="muted"></span></div>
+        </form>
+      </section>
+    </main>
+    <footer><span id="runtime-version">Relay Monitor</span><span id="proxy-address">代理 --</span><span id="footer-error"></span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

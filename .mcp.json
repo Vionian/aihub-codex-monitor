@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "aihub_monitor": {
+      "command": "node",
+      "args": ["./scripts/launcher.mjs"],
+      "cwd": ".",
+      "env_vars": [
+        "AIHUB_ACCESS_TOKEN",
+        "AIHUB_REFRESH_TOKEN",
+        "AIHUB_ACCESS_TOKEN_EXPIRES_AT",
+        "AIHUB_EMAIL",
+        "AIHUB_PASSWORD",
+        "AIHUB_COOKIE",
+        "AIHUB_USER_AGENT",
+        "AIHUB_BASE_URL",
+        "AIHUB_MONITOR_DATA_DIR",
+        "LOCALAPPDATA",
+        "XDG_CONFIG_HOME",
+        "HOME",
+        "USERPROFILE",
+        "PATH"
+      ],
+      "startup_timeout_sec": 10,
+      "tool_timeout_sec": 60
+    }
+  }
+}

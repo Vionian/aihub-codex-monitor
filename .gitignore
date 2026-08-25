@@ -1,0 +1,10 @@
+node_modules/
+*.log
+.DS_Store
+
+# Local runtime state and credentials
+data/
+runtime/
+*.credential.xml
+config.local.json
+config.private.json

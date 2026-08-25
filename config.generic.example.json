@@ -1,0 +1,22 @@
+{
+  "host": "127.0.0.1",
+  "port": 48160,
+  "relayAdapter": "generic",
+  "relayName": "我的中转站",
+  "relayBaseUrl": "https://relay.example.com",
+  "relayMultiplier": 1,
+  "relayCurrency": "USD",
+  "modelAliases": {
+    "gpt-5.6-sol-latest": "gpt-5.6-sol"
+  },
+  "modelPricing": {
+    "gpt-5.6-sol": {
+      "inputPerMillion": 5,
+      "cachedInputPerMillion": 0.5,
+      "outputPerMillion": 30
+    }
+  },
+  "routingEnabled": false,
+  "failoverEnabled": false,
+  "rolloutEnabled": true
+}

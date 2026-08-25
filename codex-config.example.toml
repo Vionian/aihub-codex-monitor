@@ -1,0 +1,9 @@
+# Set this top-level key to route Codex traffic through the monitor.
+model_provider = "aihub_monitor"
+
+# Merge this provider into %USERPROFILE%/.codex/config.toml after the monitor is installed.
+[model_providers.aihub_monitor]
+name = "AIHub through local monitor"
+base_url = "http://127.0.0.1:48160/v1"
+wire_api = "responses"
+requires_openai_auth = true
