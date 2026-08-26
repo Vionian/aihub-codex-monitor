@@ -43,6 +43,9 @@ test("statusline launcher limits CDP to loopback and supervisor never restarts C
   assert.doesNotMatch(launcher, /remote-allow-origins=\*/);
   assert.doesNotMatch(supervisor, /Stop-Process|taskkill/i);
   assert.match(supervisor, /statusline-supervisor\.log/);
+  assert.match(supervisor, /statusline=\$\(if \(\$injectorReady\)/);
+  assert.match(supervisor, /waiting-for-cdp/);
+  assert.match(supervisor, /Write-SupervisorLog "State \$healthState"/);
   assert.match(startup, /shell\.Run command, 0, False/i);
   assert.match(installer, /start-hidden\.vbs/);
   assert.match(installer, /wscript\.exe/i);

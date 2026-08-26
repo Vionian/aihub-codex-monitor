@@ -1,6 +1,6 @@
 {
   "name": "aihub-codex-monitor",
-  "version": "0.3.1+codex.20260825181445",
+  "version": "0.3.2+codex.20260826022758",
   "description": "Generic relay request telemetry and pricing, with AIHub routing and balance enhancements for Codex.",
   "author": {
     "name": "AIHub Codex Monitor contributors"

@@ -13,6 +13,7 @@ $logPath = Join-Path $dataRoot "statusline-supervisor.log"
 $stopMarker = Join-Path $dataRoot "statusline-supervisor.stop"
 $mutex = [Threading.Mutex]::new($false, "Local\AIHubCodexMonitor.StatuslineSupervisor")
 $acquired = $false
+$lastHealthState = $null
 
 function Test-Http([string]$Uri) {
   try { return [bool](Invoke-WebRequest -Uri $Uri -UseBasicParsing -TimeoutSec 2) } catch { return $false }
@@ -37,10 +38,18 @@ try {
         (Test-Http "http://127.0.0.1:9224/json") -or
         (Test-Http "http://127.0.0.1:9222/json")
       $injectorReady = Test-Http "http://127.0.0.1:$HealthPort/healthz"
+      $healthState = "monitor=$(if ($monitorReady) { 'ready' } else { 'down' }) " +
+        "cdp=$(if ($cdpReady) { 'ready' } else { 'unavailable' }) " +
+        "statusline=$(if ($injectorReady) { 'ready' } elseif ($cdpReady) { 'down' } else { 'waiting-for-cdp' })"
+      if ($healthState -cne $lastHealthState) {
+        Write-SupervisorLog "State $healthState"
+        $lastHealthState = $healthState
+      }
       if (-not $monitorReady -or ($cdpReady -and -not $injectorReady)) {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $launcher `
           -MonitorPort $MonitorPort -HealthPort $HealthPort | Out-Null
         Write-SupervisorLog "Recovered monitor=$(-not $monitorReady) injector=$($cdpReady -and -not $injectorReady)"
+        $lastHealthState = $null
       }
     } catch {
       Write-SupervisorLog "Recovery failed: $($_.Exception.Message)"
